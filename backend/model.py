@@ -135,7 +135,7 @@ def get_sentiment_stats_from_text(text_mda):
     }
 
 
-TEST_MDA = """
+test_mda = """
  Item 7. Management&#8217;s Discussion and Analysis of Financial Condition and Results of Operations
 
 The following discussion should be read in conjunction with the consolidated financial statements and accompanying notes included in Part II, Item 8 of this Form 10-K. This Item generally discusses 2023 and 2022 items and year-to-year comparisons between 2023 and 2022. Discussions of 2021 items and year-to-year comparisons between 2022 and 2021 are not included, and can be found in &#8220;Management&#8217;s Discussion and Analysis of Financial Condition and Results of Operations&#8221; in Part II, Item 7 of the Company&#8217;s Annual Report on Form 10-K for the fiscal year ended September 24, 2022.
@@ -323,4 +323,4 @@ The Company also issues unsecured short-term promissory notes pursuant to a comm
 
 
 
-# print(get_sentiment_stats_from_text(TEST_MDA))
+# print(get_sentiment_stats_from_text(test_mda))
