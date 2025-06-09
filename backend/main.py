@@ -13,6 +13,7 @@ def get_sentiment(text = TEST_MDA):
 
     print("getting sentiment for text:", text)
     #use harsh's code to get sentiment from text
+    harsh = get_sentiment_stats_from_text(text)
 
-
-    return {"sentiment": "positive"}
+    # return {"sentiment": "positive"}
+    return {"sentiment": harsh}
