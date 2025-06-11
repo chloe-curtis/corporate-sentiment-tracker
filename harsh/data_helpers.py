@@ -14,14 +14,19 @@ BQ_PROJECT_ID = 'sentiment-lewagon'
 BQ_DATASET_ID = 'sentiment_db'
 
 #HELPER FUNCTIONS
-def download_df_from_bq(table_name):
+def download_df_from_bq(table_name, custom_query = ""):
+    """
+        table_name not used if custom query provided
+    """
     #Set up the BigQuery client
     client = bigquery.Client()
 
     BQ_TABLE_ID = table_name
     table_ref = f"{BQ_PROJECT_ID}.{BQ_DATASET_ID}.{BQ_TABLE_ID}"
-
-    query = f"SELECT * FROM `{table_ref}`"
+    if custom_query:
+        query = custom_query
+    else:
+        query = f"SELECT * FROM `{table_ref}`"
     df = client.query(query).to_dataframe()
 
     return df
