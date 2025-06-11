@@ -1,6 +1,10 @@
+
+# main.py
+
 from fastapi import FastAPI
-from model import get_sentiment_stats_from_text
-from model import TEST_MDA
+from pydantic import BaseModel
+# Hem fonksiyonu hem de test metnini model.py'dan import ediyoruz
+from model import get_sentiment_stats_from_text, test_mda
 
 app = FastAPI()
 
@@ -8,12 +12,21 @@ app = FastAPI()
 def read_root():
     return {"message": "Backend is working!"}
 
-@app.get("/get_sentiment")
-def get_sentiment(text = TEST_MDA):
+# --- İSTEĞE BAĞLI METİN ANALİZİ İÇİN MEVCUT ENDPOINT (Bu kalabilir) ---
+@app.post("/analyze/")
+def analyze_sentiment(mda_text):
+    sentiment_results = get_sentiment_stats_from_text(mda_text) #finbert
+    return {"sentiment_results": sentiment_results}
 
-    print("getting sentiment for text:", text)
-    #use harsh's code to get sentiment from text
-    harsh = get_sentiment_stats_from_text(text)
+# --- YENİ ENDPOINT: Sadece model.py'daki varsayılan metni analiz eder ---
+@app.get("/analyze_default_mda/")
+def analyze_default_mda():
+    """
+    Analyzes the hardcoded TEST_MDA string from model.py and returns the results.
+    """
+    # Doğrudan import edilen TEST_MDA değişkenini kullanıyoruz
+    sentiment_results = get_sentiment_stats_from_text(test_mda)
 
-    # return {"sentiment": "positive"}
-    return {"sentiment": harsh}
+    # Sonuçları JSON olarak geri döndür
+    return {"source": "Default TEST_MDA from model.py", "sentiment_results": sentiment_results}
+    return {"sentiment_results": sentiment_results}
