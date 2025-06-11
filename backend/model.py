@@ -7,7 +7,8 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 import joblib
 import io
-from google.cloud import storage
+#if bucket later
+# from google.cloud import storage
 import pickle
 import pandas as pd
 
@@ -171,27 +172,6 @@ def get_sentiment_stats_from_text(text_mda):
 def load_model_from_local(model_path):
     model_pipe = pickle.load(open(model_path,"rb"))
     return model_pipe
-
-def load_pickle_from_bucket(bucket_filepath, bucket_name="sentiment_chloe-curtis"):
-    try:
-        # Initialize GCS client
-        storage_client = storage.Client()
-        bucket = storage_client.bucket(bucket_name)
-        bucket_filepath = "model/model_pipeline.pkl"
-        # Access blob
-        blob = bucket.blob(bucket_filepath)
-
-        # Download bytes and load into memory
-        pickle_bytes = blob.download_as_bytes()
-        model = joblib.load(io.BytesIO(pickle_bytes))
-
-        print(f"✅ Successfully loaded pickle file '{bucket_filepath}' from bucket '{bucket_name}'.")
-        return model
-
-    except Exception as e:
-        print(f"❌ Failed to load pickle from bucket: {e}")
-        return None
-
 #chloe model
 def make_prediction(X_new):
 # "net_sentiment":         net_sentiment,
@@ -202,6 +182,29 @@ def make_prediction(X_new):
     prediction = pipe_model.predict(X_new)
     print("prediction", prediction)
     return prediction
+
+
+# def load_pickle_from_bucket(bucket_filepath, bucket_name="sentiment_chloe-curtis"):
+#     try:
+#         # Initialize GCS client
+#         storage_client = storage.Client()
+#         bucket = storage_client.bucket(bucket_name)
+#         bucket_filepath = "model/model_pipeline.pkl"
+#         # Access blob
+#         blob = bucket.blob(bucket_filepath)
+
+#         # Download bytes and load into memory
+#         pickle_bytes = blob.download_as_bytes()
+#         model = joblib.load(io.BytesIO(pickle_bytes))
+
+#         print(f"✅ Successfully loaded pickle file '{bucket_filepath}' from bucket '{bucket_name}'.")
+#         return model
+
+#     except Exception as e:
+#         print(f"❌ Failed to load pickle from bucket: {e}")
+#         return None
+
+
 
 
 test_mda = """
@@ -400,6 +403,6 @@ X_new = X_new.astype({
     'neutral_dominance': 'object'
 })
 
-make_prediction(X_new)
+print("test prediction with manual x_new:",make_prediction(X_new))
 
 #print(get_sentiment_stats_from_text(test_mda))
