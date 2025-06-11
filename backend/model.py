@@ -1,6 +1,7 @@
 #finbert imports
 import re
 import torch
+import numpy as np
 from torch.nn.functional import softmax
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
@@ -20,6 +21,7 @@ def get_sentiment_stats_from_text(text_mda):
     Returns a dict with all 12 metrics. Assumes logits order is [positive, negative, neutral].
 
     """
+    print(text_mda)
 
     null_result_dict = {
             "count_positive_chunks": 0,
@@ -39,6 +41,7 @@ def get_sentiment_stats_from_text(text_mda):
     # 1) Skip if empty or too short
     if not isinstance(text_mda, str) or text_mda.strip() == "" or len(text_mda.strip()) < 20:
         # No valid chunks → everything zero or None
+        print("text too short")
         return null_result_dict
 
     # 2) Split into “paragraphs” by blank lines, drop any < 50 chars
@@ -69,6 +72,7 @@ def get_sentiment_stats_from_text(text_mda):
 
     # 4) If no valid paragraphs, return zeros/None
     if not chunk_probs:
+        print("no valid paragraphs")
         return null_result_dict
 
     # 5) Initialize counters, sums, and max trackers
@@ -119,7 +123,24 @@ def get_sentiment_stats_from_text(text_mda):
     avg_neg = sum_neg / num_chunks
     avg_neu = sum_neu / num_chunks
 
+    # 8) net sentiment
+    net_sentiment = ((count_pos - count_neg) / num_chunks)
+
+    # 9) neutral dominance
+    neutral_dominance = count_neu / num_chunks
+
+    # 10) entropy
+    #entropy
+    entropy = 0.0
+    # Create a list of the proportions
+    proportions = [count_pos / num_chunks, count_neg / num_chunks, count_neu / num_chunks]
+    # Loop through and apply the entropy formula to non-zero proportions
+    for p in proportions:
+        if p > 0:
+            entropy -= p * np.log2(p)
+
     return {
+        # total chunks
         "count_positive_chunks": count_pos,
         "count_negative_chunks": count_neg,
         "count_neutral_chunks":  count_neu,
@@ -132,7 +153,23 @@ def get_sentiment_stats_from_text(text_mda):
         "avg_positive":          avg_pos,
         "avg_negative":          avg_neg,
         "avg_neutral":           avg_neu,
+        "net_sentiment":         net_sentiment,
+        "neutral_dominance":     neutral_dominance,
+        "sentiment_entropy":     entropy
+        #add sector
+        #industry
     }
+
+
+#chloe model
+
+
+
+
+
+
+
+
 
 
 test_mda = """
@@ -323,4 +360,4 @@ The Company also issues unsecured short-term promissory notes pursuant to a comm
 
 
 
-# print(get_sentiment_stats_from_text(test_mda))
+#print(get_sentiment_stats_from_text(test_mda))
