@@ -5,9 +5,17 @@ import numpy as np
 from torch.nn.functional import softmax
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
+import joblib
+import io
+#if bucket later
+# from google.cloud import storage
+import pickle
+import pandas as pd
+
 #load finbert model
 tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
 model     = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
+local_model_path = "model/pipeline.pkl"
 
 
 def get_sentiment_stats_from_text(text_mda):
@@ -155,19 +163,49 @@ def get_sentiment_stats_from_text(text_mda):
         "avg_neutral":           avg_neu,
         "net_sentiment":         net_sentiment,
         "neutral_dominance":     neutral_dominance,
-        "sentiment_entropy":     entropy
-        #add sector
-        #industry
+        "sentiment_entropy":     entropy,
+        # "sector" :              sector,
+        # "industry":              industry,
+        # "quarter":              quarter
     }
 
-
+def load_model_from_local(model_path):
+    model_pipe = pickle.load(open(model_path,"rb"))
+    return model_pipe
 #chloe model
+def make_prediction(X_new_dict):
+# "net_sentiment":         net_sentiment,
+# "neutral_dominance":     neutral_dominance,
+# industry
+# quarter
+    print(X_new_dict)
 
 
+    pipe_model = load_model_from_local(local_model_path) #bucket later?
+    prediction = pipe_model.predict(X_new)
+    print("prediction", prediction)
+    return prediction
 
 
+# def load_pickle_from_bucket(bucket_filepath, bucket_name="sentiment_chloe-curtis"):
+#     try:
+#         # Initialize GCS client
+#         storage_client = storage.Client()
+#         bucket = storage_client.bucket(bucket_name)
+#         bucket_filepath = "model/model_pipeline.pkl"
+#         # Access blob
+#         blob = bucket.blob(bucket_filepath)
 
+#         # Download bytes and load into memory
+#         pickle_bytes = blob.download_as_bytes()
+#         model = joblib.load(io.BytesIO(pickle_bytes))
 
+#         print(f"✅ Successfully loaded pickle file '{bucket_filepath}' from bucket '{bucket_name}'.")
+#         return model
+
+#     except Exception as e:
+#         print(f"❌ Failed to load pickle from bucket: {e}")
+#         return None
 
 
 
@@ -357,7 +395,17 @@ The Company also issues unsecured short-term promissory notes pursuant to a comm
 
 """
 
+X_new = pd.DataFrame([{
+        'net_sentiment': -0.1,
+        'industry': 'Auto Manufacturers',
+        'q_num': "4",
+        'neutral_dominance': False
+    }])
+X_new = X_new.astype({
+    'q_num': 'object',
+    'neutral_dominance': 'object'
+})
 
-
+print("test prediction with manual x_new:", make_prediction(X_new))
 
 #print(get_sentiment_stats_from_text(test_mda))
