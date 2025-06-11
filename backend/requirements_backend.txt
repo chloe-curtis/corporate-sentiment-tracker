@@ -6,3 +6,4 @@ joblib
 numpy
 transformers
 torch
+xgboost

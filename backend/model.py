@@ -6,7 +6,8 @@ from torch.nn.functional import softmax
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import joblib
 import io
-from google.cloud import storage
+#if bucket later
+# from google.cloud import storage
 import pickle
 import pandas as pd
 from google.cloud import bigquery
@@ -14,7 +15,6 @@ from google.cloud import bigquery
 #load finbert model
 tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
 model     = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
-local_model_path = "pipeline.pkl"
 
 #not clean... has &#8220
 test_mda = """
@@ -24,6 +24,8 @@ Management&#8217;s Discussion and Analysis of Financial Condition and Results of
 text_mda = test_mda
 q_num = 2
 ticker = "BBY"
+local_model_path = "model/pipeline.pkl"
+
 
 def get_sentiment_stats_from_text(text_mda):
     """
@@ -227,18 +229,19 @@ def get_industry_for_ticker(ticker: str):
     print(industry)
     return industry
 
-X_new = get_X_raw(test_mda)
+
+#chloe model
 def make_prediction(X_new):
-# "net_sentiment":         net_sentiment,
-# "neutral_dominance":     neutral_dominance,
-# industry
-# quarter
+    # "net_sentiment":         net_sentiment,
+    # "neutral_dominance":     neutral_dominance,
+    # industry
+    # quarter
     pipe_model = load_model_from_local(local_model_path)
     prediction = pipe_model.predict(X_new)
     print("prediction", prediction)
     return prediction
 
-make_prediction(X_new)
+
 
 TEST_MDA = """
  Item 7. Management&#8217;s Discussion and Analysis of Financial Condition and Results of Operations
@@ -424,5 +427,23 @@ As of September 30, 2023, the Company had outstanding fixed-rate notes with vary
 The Company also issues unsecured short-term promissory notes pursuant to a commercial paper program. As of September 30, 2023, the Company had $6.0 billion of commercial paper outstanding, all of which was payable within 12 months.
 
 """
+
+
+X_new = pd.DataFrame([{
+        'net_sentiment': -0.1,
+        'industry': 'Auto Manufacturers',
+        'q_num': "4",
+        'neutral_dominance': False
+    }])
+X_new = X_new.astype({
+    'q_num': 'object',
+    'neutral_dominance': 'object'
+})
+
+print("test prediction with manual x_new:", make_prediction(X_new))
+
+print("\n=====\n")
+X_new2 = get_X_raw(test_mda)
+print("test prediction with function made x_new, from test_mda", make_prediction(X_new2))
 
 #print(get_sentiment_stats_from_text(test_mda))
