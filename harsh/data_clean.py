@@ -39,6 +39,8 @@ from data_utils import get_sentiment_stats_from_text
 import pandas as pd
 import os
 
+#Successfully installed google-cloud-bigquery
+#pip install google-cloud-storage
 #pip install google-cloud-bigquery-storage
 #bucket
 from google.cloud import storage
@@ -103,10 +105,24 @@ def get_all_clean_bucket_files_and_upload_to_bq(prefix = "clean_data", upload=Tr
 
     return bucket_filepaths_df
 
-def get_all_bq_extraction_progress(include_mda_text=True):
+def get_all_bq_extraction_progress(include_mda_text=True, year = None):
     print("getting BQ extraction progress")
-    #get all files
-    bucket_clean_files_df = download_df_from_bq("bucket_clean_filepaths")
+    #get all files, unless year specified
+    if year:
+        print(f"getting year {year}")
+        custom_query = f"""
+        WITH year_files AS (
+            SELECT *,
+            CAST (LEFT(filename,4) AS INT64) as year
+            FROM `sentiment-lewagon.sentiment_db.bucket_clean_filepaths`
+        )
+        SELECT * FROM year_files WHERE year = {year}
+        """
+        bucket_clean_files_df = download_df_from_bq("bucket_clean_filepaths", custom_query=custom_query)
+    else:
+        bucket_clean_files_df = download_df_from_bq("bucket_clean_filepaths")
+
+
     #get tables with progress
     mda_df = download_df_from_bq("MDA")
     sentiment_df = download_df_from_bq("SENTIMENT").drop_duplicates()
@@ -128,8 +144,6 @@ def get_all_bq_extraction_progress(include_mda_text=True):
 
     #sort by recent first
     bucket_clean_df = bucket_clean_df.sort_values(by="conformed_period_of_report", ascending=False)
-
-    bucket_clean_df.reset_index(drop=True)
 
     return bucket_clean_df.reset_index(drop=True)
 
@@ -181,24 +195,29 @@ def extract_missing_mda_and_upload_to_bq(testing=True, chunk_size= 250):
     print(f"finished uploading {total_rows} rows to MDA table.")
     print(f"Time taken: {time_taken/60:.4f} minutes")
 
-def get_and_upload_missing_sentiment_to_bq(testing=True, chunk_size=50):
+#consider specifying year/quarter to compartmentalise work
+def get_and_upload_missing_sentiment_to_bq(testing=True, chunk_size=50, running_local = False, year=None):
     print("loading sentiment analysis model")
     #load model
     tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
     model     = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
 
-    bq_progress_df = get_all_bq_extraction_progress()
+    bq_progress_df = get_all_bq_extraction_progress(year=year)
 
     #keep only rows without sentiment but with mda
     sentiment_todo = (bq_progress_df.has_sentiment != 1) & (bq_progress_df.has_mda == 1)
-    sentiment_to_process_df = bq_progress_df[sentiment_todo]
+    sentiment_to_process_df = bq_progress_df[sentiment_todo].reset_index(drop=True)
 
     #chunks
     total_rows = len(sentiment_to_process_df)
+    if running_local:
+        sentiment_to_process_df.sort_values(by="conformed_period_of_report", ascending=True)
+        chunk_size = 50
+        # total_rows = 40
     if testing:
-        chunk_size = 20
+        chunk_size = 50
         # limit total rows if testing
-        # total_rows = 500
+        total_rows = 5
         print(f"in testing mode, doing {total_rows} rows!")
 
     print(f"extracting {total_rows} rows of sentiment, in chunks of {chunk_size}")
@@ -213,6 +232,9 @@ def get_and_upload_missing_sentiment_to_bq(testing=True, chunk_size=50):
             chunk_start_time = time.time()
             chunk_rows = []
             for idx, row in sentiment_to_process_df.iloc[start_row : end_row + 1].iterrows():
+                #its torture waiting for chunks...
+                if idx % 5 == 0:
+                    print(f"Working on row with index {idx}")
                 out_row_dict = {}
 
                 out_row_dict['cik']  = int(row["cik"])
@@ -246,10 +268,8 @@ def get_and_upload_missing_sentiment_to_bq(testing=True, chunk_size=50):
     time_taken = end_time - start_time
     print(f"Time taken for all {total_rows}: {time_taken/60:.4f} minutes")
 
-
-#TODO make extract sentiment from paths func
-# ^ extract all MDAs
-# ^ extract sentiment from those MDAs
+#consider getting sentiment as batch (not row by row)
+#9min for 20 rows on louis laptop
 
 #################################
 
@@ -281,4 +301,6 @@ sample_bucket_path = "clean_data_2019q1/20190103_10-Q_edgar_data_1702744_0001702
 
 # extract_missing_mda_and_upload_to_bq(testing=False)
 
-get_and_upload_missing_sentiment_to_bq(testing=False, chunk_size=25)
+if __name__ == "__main__":
+    #year =2019 next
+    get_and_upload_missing_sentiment_to_bq(year=2020, testing=False)
