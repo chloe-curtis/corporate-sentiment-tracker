@@ -173,11 +173,14 @@ def load_model_from_local(model_path):
     model_pipe = pickle.load(open(model_path,"rb"))
     return model_pipe
 #chloe model
-def make_prediction(X_new):
+def make_prediction(X_new_dict):
 # "net_sentiment":         net_sentiment,
 # "neutral_dominance":     neutral_dominance,
 # industry
 # quarter
+    print(X_new_dict)
+
+
     pipe_model = load_model_from_local(local_model_path) #bucket later?
     prediction = pipe_model.predict(X_new)
     print("prediction", prediction)
@@ -403,6 +406,6 @@ X_new = X_new.astype({
     'neutral_dominance': 'object'
 })
 
-print("test prediction with manual x_new:",make_prediction(X_new))
+print("test prediction with manual x_new:", make_prediction(X_new))
 
 #print(get_sentiment_stats_from_text(test_mda))
