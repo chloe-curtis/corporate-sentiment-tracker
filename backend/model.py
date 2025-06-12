@@ -28,7 +28,7 @@ ticker = "BBY"
 local_model_path = "backend/model/pipeline.pkl"
 
 
-def get_sentiment_stats_from_text(text_mda, tokenizer=tokenizer, model=model):
+def get_sentiment_stats_from_text(text_mda, tokenizer, model):
     """
     Break the input text into paragraphs, run each through FinBERT, and compute:
       • count_positive_chunks, count_negative_chunks, count_neutral_chunks
