@@ -4,8 +4,8 @@ pandas
 scikit-learn==1.6.1
 joblib
 numpy
-transformers
-torch
+# transformers
+# torch
 # google-cloud-bigquery-storage #only for local development
 # google-cloud-bigquery
 # google-cloud-storage

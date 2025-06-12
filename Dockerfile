@@ -19,7 +19,8 @@
 # backend/Dockerfile (Optimize Edilmiş Versiyon)
 
 # 1. Adım: Temel imajı belirle
-FROM python:3.12-slim
+# FROM python:3.12-slim
+FROM huggingface/transformers-pytorch-cpu:latest
 
 # 2. Adım: Konteyner içinde çalışılacak klasörü ayarla
 WORKDIR /app
@@ -40,4 +41,4 @@ COPY backend backend
 # Ortam değişkeni ($PORT) kullanmak yerine doğrudan portu belirtmek daha güvenilirdir.
 CMD uvicorn backend.main:app --host 0.0.0.0 --port $PORT
 #
-# 
+#
