@@ -14,8 +14,8 @@ from google.cloud import bigquery, storage
 import xgboost
 
 # #load finbert model
-tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
-model     = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
+# tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
+# model     = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
 
 #not clean... has &#8220
 test_mda = """
@@ -242,8 +242,9 @@ def make_prediction(X_new):
     print("prediction", prediction)
     return prediction
 
-def get_prediction_from_mda(mda, tokenizer=tokenizer, model=model):
-
+def get_prediction_from_mda(mda):
+    tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
+    model     = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
     stats = get_sentiment_stats_from_text(mda, tokenizer, model)
     industry = get_industry_for_ticker(ticker)
 

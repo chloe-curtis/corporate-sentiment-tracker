@@ -10,8 +10,8 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 
 app = FastAPI()
-app.state.tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
-app.state.model     = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
+# app.state.tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
+# app.state.model     = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
 
 class MdaPayload(BaseModel):
     mda_payload: str
@@ -68,7 +68,7 @@ def read_root():
 @app.post("/get_prediction_from_mda")
 def get_prediction_from_sentiment_stats_proc(payload: MdaPayload):
     print("mda_payload", payload.mda_payload)
-    prediction, neutral_dominance, net_sentiment, industry, sentiment_entropy = get_prediction_from_mda(payload.mda_payload, app.state.tokenizer, app.state.model)
+    prediction, neutral_dominance, net_sentiment, industry, sentiment_entropy = get_prediction_from_mda(payload.mda_payload)
     # Convert numpy array or numpy type to Python int
     if hasattr(prediction, "__iter__") and not isinstance(prediction, (str, bytes, dict)):
         # If it's an array-like, get the first element
