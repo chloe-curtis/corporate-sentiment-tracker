@@ -2,6 +2,7 @@
 import re
 import torch
 import numpy as np
+#commenting out while installing
 from torch.nn.functional import softmax
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import joblib
@@ -12,7 +13,7 @@ import pickle
 import pandas as pd
 from google.cloud import bigquery
 
-#load finbert model
+# #load finbert model
 tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
 model     = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
 
