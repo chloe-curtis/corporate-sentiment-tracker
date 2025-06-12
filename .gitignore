@@ -1,1 +1,8 @@
 raw_data/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.DS_Store
+*Zone.Identifier
+*.ipynb_checkpoints
