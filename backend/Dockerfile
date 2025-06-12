@@ -38,4 +38,4 @@ COPY . .
 
 # 6. Adım: Konteyner çalıştığında hangi komutun çalışacağını belirt
 # Ortam değişkeni ($PORT) kullanmak yerine doğrudan portu belirtmek daha güvenilirdir.
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "$PORT"]
