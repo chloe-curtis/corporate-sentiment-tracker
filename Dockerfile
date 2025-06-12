@@ -39,4 +39,5 @@ COPY backend backend
 # 6. Adım: Konteyner çalıştığında hangi komutun çalışacağını belirt
 # Ortam değişkeni ($PORT) kullanmak yerine doğrudan portu belirtmek daha güvenilirdir.
 CMD uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+#
 # 
