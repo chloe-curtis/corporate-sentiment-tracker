@@ -34,8 +34,8 @@ RUN pip install -r requirements_backend.txt
 
 # 5. Adım: SONRA projedeki diğer tüm dosyaları kopyala
 # main.py'de değişiklik yaptığınızda sadece bu hızlı adım tekrar çalışır.
-COPY . .
+COPY backend backend
 
 # 6. Adım: Konteyner çalıştığında hangi komutun çalışacağını belirt
 # Ortam değişkeni ($PORT) kullanmak yerine doğrudan portu belirtmek daha güvenilirdir.
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "$PORT"]
+CMD uvicorn backend.main:app --host 0.0.0.0 --port $PORT
