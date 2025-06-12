@@ -1,8 +1,13 @@
 fastapi
 uvicorn
 pandas
-scikit-learn
+scikit-learn==1.6.1
 joblib
 numpy
 transformers
 torch
+# google-cloud-bigquery-storage #only for local development
+# google-cloud-bigquery
+# google-cloud-storage
+db-dtypes
+xgboost
