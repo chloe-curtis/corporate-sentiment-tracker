@@ -6,9 +6,9 @@ scikit-learn
 joblib
 numpy
 # transformers
-torch
-# google-cloud-bigquery-storage #only for local development
-# google-cloud-bigquery
-# google-cloud-storage
+# torch
+google-cloud-bigquery-storage
+google-cloud-bigquery
+google-cloud-storage
 db-dtypes
 xgboost
