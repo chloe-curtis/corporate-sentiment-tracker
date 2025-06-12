@@ -1,16 +1,34 @@
-#finbert imports
 import re
 import torch
 import numpy as np
+#commenting out while installing
 from torch.nn.functional import softmax
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import joblib
+import io
+#if bucket later
+# from google.cloud import storage
+import pickle
+import pandas as pd
+from google.cloud import bigquery, storage
+import xgboost
 
-#load finbert model
+# #load finbert model
 tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
 model     = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
 
+#not clean... has &#8220
+test_mda = """
+Item 2. Management's Discussion and Analysis of Financial Condition and Results of Operations. Unless the context otherwise requires, the use of the terms &#8220;Best Buy,&#8221; &#8220;we,&#8221; &#8220;us&#8221; and &#8220;our&#8221; refers to Best Buy Co., Inc. and its consolidated subsidiaries. Any references to our website addresses do not constitute incorporation by reference of the information contained on the websites.
+Management&#8217;s Discussion and Analysis of Financial Condition and Results of Operations (&#8220;MD&#38;A&#8221;) is intended to provide a reader of our financial statements with a narrative from the perspective of our management on our financial condition, results of operations, liquidity and certain other factors that may affect our future results. Unless otherwise noted, transactions and other factors significantly impacting our financial condition, results of operations and liquidity are discussed in order of magnitude. Our MD&#38;A should be read in conjunction with our Annual Report on Form 10-K for the fiscal year ended February 1, 2025 (including the information presented therein under Risk Factors ), as well as our other reports on Forms 10-Q and 8-K and other publicly available information. All amounts herein are unaudited. Overview. We are driven by our purpose to enrich lives through technology and our vision to personalize and humanize technology solutions for every stage of life . We accomplish this by leveraging our combination of tech expertise and a human touch to meet our customers&#8217; everyday needs, whether they come to us online, visit our stores or invite us into their homes. We have two reportable segments: Domestic and International. The Domestic segment is comprised of our operations in all states, districts and territories of the U.S. and our Best Buy Health business. The International segment is comprised of all our operations in Canada. Our fiscal year ends on the Saturday nearest the end of January. Our business, like that of many retailers, is seasonal. A large proportion of our revenue and earnings is generated in the fiscal fourth quarter, which includes the majority of the holiday shopping season. Comparable Sales. Throughout this MD&#38;A, we refer to comparable sales. Comparable sales is a metric used by management to evaluate the performance of our existing stores, websites and call centers by measuring the change in net sales for a particular period over the comparable prior period of equivalent length. Comparable sales includes revenue from stores, websites and call centers operating for at least 14 full months. Revenue from online sales is included in comparable sales and represents sales initiated on a website or app, regardless of whether customers choose to pick up product in store, curbside, at an alternative pick-up location or take delivery direct to their homes. Revenue from acquisitions is included in comparable sales beginning with the first full quarter following the first anniversary of the date of the acquisition. Comparable sales also includes credit card revenue, gift card breakage, commercial sales and sales of merchandise to wholesalers and dealers, as applicable. Revenue from stores closed more than 14 days, including but not limited to relocated, remodeled, expanded and downsized stores, or stores impacted by natural disasters, is excluded from comparable sales until at least 14 full months after reopening. Comparable sales excludes the impact of certain periodic warranty-related profit-share revenue, the effect of fluctuations in foreign currency exchange rates (applicable to our International segment only) and the impact of the 53 rd week (applicable in 53-week fiscal years only). Comparable sales is based on our fiscal calendar and is not adjusted to align calendar weeks. All periods presented apply this methodology consistently. Consistent with our comparable sales policy, revenue from Best Buy Express locations rebranded as a result of our previously announced collaboration with Bell Canada is excluded from our comparable sales calculation until locations have been operating for at least 14 full months. We believe comparable sales is a meaningful supplemental metric for investors to evaluate revenue performance resulting from growth in existing stores, websites and call centers versus the portion resulting from opening new stores or closing existing stores. The method of calculating comparable sales varies across the retail industry. As a result, our method of calculating comparable sales may not be the same as other retailers&#8217; methods. Non-GAAP Financial Measures This MD&#38;A includes financial information prepared in accordance with accounting principles generally accepted in the U.S. (&#8220;GAAP&#8221;), as well as certain non-GAAP financial measures, such as consolidated adjusted operating income, consolidated adjusted operating income rate, consolidated adjusted effective tax rate and consolidated adjusted diluted earnings per share (&#8220;EPS&#8221;). We believe that non-GAAP financial measures, when reviewed in conjunction with GAAP financial measures, provide additional useful information for evaluating current period performance and assessing future performance. For these reasons, internal management reporting, including budgets, forecasts and financial targets used for short-term incentives are based on non-GAAP financial measures. Generally, our non-GAAP financial measures include adjustments for items such as restructuring charges, goodwill and acquired intangible asset impairments, price-fixing settlements, gains and losses on sales of subsidiaries and certain investments, amortization of definite-lived intangible assets associated with acquisitions, certain acquisition-related costs and the tax effect of all such items. In addition, certain other items may be excluded from non-GAAP financial measures when we believe doing so provides greater clarity to management and our investors. We provide reconciliations of the most comparable financial measures presented in accordance with GAAP to presented non-GAAP financial measures that enable investors to understand the adjustments made in arriving at the non-GAAP financial measures and to evaluate performance using the same metrics as management. These non-GAAP financial measures should be considered in addition to, and not superior to or as a substitute for, GAAP financial measures. We strongly encourage investors and shareholders to review our financial statements and publicly filed reports in their entirety and not to rely on any single financial measure. Non-GAAP financial measures may be calculated differently from similarly titled measures used by other companies, thereby limiting their usefulness for comparative purposes. In our discussions of the operating results of our consolidated business and our International segment, we sometimes refer to the impact of changes in foreign currency exchange rates or the impact of foreign currency exchange rate fluctuations, which are references to the differences between the foreign currency exchange rates we use to convert the International segment&#8217;s operating results from local currencies into U.S. dollars for reporting purposes. We also may use the term &#8220;constant currency,&#8221; which represents results adjusted to exclude foreign currency impacts. We calculate those impacts as the difference between the current period results translated using the current period currency exchange rates and using the comparable prior period currency exchange rates. We believe the disclosure of revenue changes in constant currency provides useful supplementary information to investors in light of significant fluctuations in currency rates. Refer to the Non-GAAP Financial Measures section below for detailed reconciliations of items impacting consolidated adjusted operating income, consolidated adjusted effective tax rate and consolidated adjusted diluted EPS in the presented periods. Tariffs.We continue to face significant uncertainty regarding the scope, timing and magnitude of tariffs that may affect the products we sell and the consequent financial impact on our business. While we directly import approximately 2% to 3% of our overall assortment, our complex supply chain is heavily reliant on vendor imports from China, which we currently estimate make up approximately 30% to 35% of the products we purchase, compared to 55% disclosed within our Annual Report on Form 10-K for the fiscal year ended February 1, 2025. This is the result of vendors using production capabilities in multiple countries and leveraging their ability to flex sourcing options as the environment evolves. We currently estimate approximately 25% of the products we purchase are from the U.S. and Mexico. In conjunction with our vendors, we continue to seek to mitigate the impact of tariffs on our business and our customers.
+"""
+text_mda = test_mda
+q_num = '2'
+ticker = "BBY"
+local_model_path = "backend/model/pipeline.pkl"
 
-def get_sentiment_stats_from_text(text_mda):
+
+def get_sentiment_stats_from_text(text_mda, tokenizer=tokenizer, model=model):
     """
     Break the input text into paragraphs, run each through FinBERT, and compute:
       • count_positive_chunks, count_negative_chunks, count_neutral_chunks
@@ -21,7 +39,6 @@ def get_sentiment_stats_from_text(text_mda):
     Returns a dict with all 12 metrics. Assumes logits order is [positive, negative, neutral].
 
     """
-    print(text_mda)
 
     null_result_dict = {
             "count_positive_chunks": 0,
@@ -124,16 +141,17 @@ def get_sentiment_stats_from_text(text_mda):
     avg_neu = sum_neu / num_chunks
 
     # 8) net sentiment
-    net_sentiment = ((count_pos - count_neg) / num_chunks)
+    net_sentiment = ((sum_pos - sum_neg) / num_chunks)
 
     # 9) neutral dominance
-    neutral_dominance = count_neu / num_chunks
-
+    neutral_ratio = sum_neu / num_chunks
+    neutral_dominance = neutral_ratio > 0.6
+    print(f'neutral_dominance from get_senti function: {neutral_dominance}')
     # 10) entropy
     #entropy
     entropy = 0.0
     # Create a list of the proportions
-    proportions = [count_pos / num_chunks, count_neg / num_chunks, count_neu / num_chunks]
+    proportions = [sum_pos / num_chunks, sum_neg / num_chunks, sum_neu / num_chunks]
     # Loop through and apply the entropy formula to non-zero proportions
     for p in proportions:
         if p > 0:
@@ -156,23 +174,102 @@ def get_sentiment_stats_from_text(text_mda):
         "net_sentiment":         net_sentiment,
         "neutral_dominance":     neutral_dominance,
         "sentiment_entropy":     entropy
-        #add sector
-        #industry
     }
+
+def load_model_from_local(model_path):
+    model_pipe = pickle.load(open(model_path,"rb"))
+    return model_pipe
+
+#untested?
+def load_pickle_from_bucket(bucket_filepath, bucket_name="sentiment_chloe-curtis"):
+    try:
+        # Initialize GCS client
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        bucket_filepath = "model/model_pipeline.pkl"
+        # Access blob
+        blob = bucket.blob(bucket_filepath)
+
+        # Download bytes and load into memory
+        pickle_bytes = blob.download_as_bytes()
+        model = joblib.load(io.BytesIO(pickle_bytes))
+
+        print(f"✅ Successfully loaded pickle file '{bucket_filepath}' from bucket '{bucket_name}'.")
+        return model
+
+    except Exception as e:
+        print(f"❌ Failed to load pickle from bucket: {e}")
+        return None
+
+def get_X_raw(test_mda):
+    stats = get_sentiment_stats_from_text(test_mda)
+    industry = get_industry_for_ticker(ticker)
+    X_raw = {
+        "neutral_dominance": stats.get("neutral_dominance", None),
+        "net_sentiment": stats.get("net_sentiment", None),
+        "industry": industry,
+        "q_num": q_num
+    }
+    X_new = pd.DataFrame([X_raw])  # wrap dict in a list to make 1-row DataFrame
+    X_new = X_new.astype({
+        'q_num': 'object',
+        'neutral_dominance': 'object'
+    })
+    return X_new
+
+def get_industry_for_ticker(ticker: str):
+    client = bigquery.Client()
+    ticker_safe = ticker.replace("'", "''")
+    query = f"""
+        SELECT ticker, industry
+        FROM `sentiment-lewagon.sentiment_db.SECTOR`
+        WHERE ticker = '{ticker_safe}'
+    """
+    df = client.query(query).to_dataframe()
+    industry = df.iloc[0]["industry"]
+    print(industry)
+    return industry
 
 
 #chloe model
+def make_prediction(X_new):
+    # "net_sentiment":         net_sentiment,
+    # "neutral_dominance":     neutral_dominance,
+    # industry
+    # quarter
+    pipe_model = load_model_from_local(local_model_path)
+    prediction = pipe_model.predict(X_new)
+    print("prediction", prediction)
+    return prediction
+
+def get_prediction_from_mda(mda, tokenizer=tokenizer, model=model):
+
+    stats = get_sentiment_stats_from_text(mda, tokenizer, model)
+    industry = get_industry_for_ticker(ticker)
+
+    X_raw = {
+        "neutral_dominance": stats.get("neutral_dominance", None),
+        "net_sentiment": stats.get("net_sentiment", None),
+        "industry": industry,
+        "q_num": q_num
+    }
+    X_new = pd.DataFrame([X_raw])  # wrap dict in a list to make 1-row DataFrame
+    X_new = X_new.astype({
+        'q_num': 'object',
+        'neutral_dominance': 'object'
+    })
+
+    print("X processed", X_new)
+
+    pipe_model = load_model_from_local(local_model_path)
+    prediction = pipe_model.predict(X_new)
+    # print("prediction", prediction)
+
+    return prediction, stats.get("neutral_dominance", None), stats.get("net_sentiment", None), industry, stats.get("sentiment_entropy", None)
 
 
 
-
-
-
-
-
-
-
-test_mda = """
+TEST_MDA = """
  Item 7. Management&#8217;s Discussion and Analysis of Financial Condition and Results of Operations
 
 The following discussion should be read in conjunction with the consolidated financial statements and accompanying notes included in Part II, Item 8 of this Form 10-K. This Item generally discusses 2023 and 2022 items and year-to-year comparisons between 2023 and 2022. Discussions of 2021 items and year-to-year comparisons between 2022 and 2021 are not included, and can be found in &#8220;Management&#8217;s Discussion and Analysis of Financial Condition and Results of Operations&#8221; in Part II, Item 7 of the Company&#8217;s Annual Report on Form 10-K for the fiscal year ended September 24, 2022.
@@ -357,7 +454,22 @@ The Company also issues unsecured short-term promissory notes pursuant to a comm
 
 """
 
+if __name__ == "__main__":
+    X_new = pd.DataFrame([{
+            'net_sentiment': -0.1,
+            'industry': 'Auto Manufacturers',
+            'q_num': "4",
+            'neutral_dominance': False
+        }])
+    X_new = X_new.astype({
+        'q_num': 'object',
+        'neutral_dominance': 'object'
+    })
 
+    print("test prediction with manual x_new:", make_prediction(X_new))
 
+    print("\n=====\n")
+    X_new2 = get_X_raw(test_mda)
+    print("test prediction with function made x_new, from test_mda", make_prediction(X_new2))
 
-#print(get_sentiment_stats_from_text(test_mda))
+    #print(get_sentiment_stats_from_text(test_mda))
