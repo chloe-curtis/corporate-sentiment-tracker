@@ -36,7 +36,7 @@ RUN pip install --no-cache-dir -r requirements_backend.txt
 # main.py'de değişiklik yaptığınızda sadece bu hızlı adım tekrar çalışır.
 COPY backend backend
 
-EXPOSE 8080
+# EXPOSE 8080
 # 6. Adım: Konteyner çalıştığında hangi komutun çalışacağını belirt
 # Ortam değişkeni ($PORT) kullanmak yerine doğrudan portu belirtmek daha güvenilirdir.
 CMD uvicorn backend.main:app --host 0.0.0.0 --port $PORT
