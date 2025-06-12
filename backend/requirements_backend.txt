@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+pandas
+scikit-learn
+joblib
+numpy
+transformers
+torch
+xgboost
+
+# google cloud libraries
+google-cloud-storage
+google-cloud-bigquery-storage
+google-cloud-bigquery
+db-dtypes
