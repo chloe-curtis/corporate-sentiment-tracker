@@ -242,9 +242,10 @@ def make_prediction(X_new):
     print("prediction", prediction)
     return prediction
 
-def get_prediction_from_mda(mda, tokenizer, model):
+def get_prediction_from_mda(mda):
     tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
     model     = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
+    print("tokenizer and model loaded")
     stats = get_sentiment_stats_from_text(mda, tokenizer, model)
     industry = get_industry_for_ticker(ticker)
 
