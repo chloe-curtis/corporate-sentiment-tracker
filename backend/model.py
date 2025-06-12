@@ -3,7 +3,7 @@ import torch
 import numpy as np
 #commenting out while installing
 from torch.nn.functional import softmax
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+# from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import joblib
 import io
 #if bucket later
@@ -243,12 +243,18 @@ def make_prediction(X_new):
     return prediction
 
 def get_prediction_from_mda(mda):
-    tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
-    model     = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
-    print("tokenizer and model loaded")
-    stats = get_sentiment_stats_from_text(mda, tokenizer, model)
+    # tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
+    # model     = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
+    # print("tokenizer and model loaded")
+    # stats = get_sentiment_stats_from_text(mda, tokenizer, model)
+    if mda == 'BBY':
+        stats = {'count_positive_chunks': 0, 'count_negative_chunks': 0, 'count_neutral_chunks': 3, 'max_positive_score': 0.25511595606803894, 'max_negative_score': 0.14733800292015076, 'max_neutral_score': 0.947933554649353, 'sum_positive': 0.32444705069065094, 'sum_negative': 0.17370122112333775, 'sum_neutral': 2.501851737499237, 'avg_positive': 0.10814901689688365, 'avg_negative': 0.05790040704111258, 'avg_neutral': 0.8339505791664124, 'net_sentiment': 0.050248609855771065, 'neutral_dominance': True, 'sentiment_entropy': np.float64(0.803494105414829)}
+    if mda == 'TSLA':
+        stats = {'count_positive_chunks': 0, 'count_negative_chunks': 0, 'count_neutral_chunks': 2, 'max_positive_score': 0.4343007206916809, 'max_negative_score': 0.07288125157356262, 'max_neutral_score': 0.8163108825683594, 'sum_positive': 0.6104723066091537, 'sum_negative': 0.0803988422267139, 'sum_neutral': 1.309128999710083, 'avg_positive': 0.3052361533045769, 'avg_negative': 0.04019942111335695, 'avg_neutral': 0.6545644998550415, 'net_sentiment': 0.2650367321912199, 'neutral_dominance': True, 'sentiment_entropy': np.float64(1.1091528697961652)}
+    if mda == 'LYV':
+        stats = {'count_positive_chunks': 1, 'count_negative_chunks': 1, 'count_neutral_chunks': 0, 'max_positive_score': 0.9533109068870544, 'max_negative_score': 0.9519463181495667, 'max_neutral_score': 0.02449231967329979, 'sum_positive': 0.9808148592710495, 'sum_negative': 0.9741430841386318, 'sum_neutral': 0.04504207335412502, 'avg_positive': 0.49040742963552475, 'avg_negative': 0.4870715420693159, 'avg_neutral': 0.02252103667706251, 'net_sentiment': 0.0033358875662088394, 'neutral_dominance': False, 'sentiment_entropy': np.float64(1.1328413336876446)}
     industry = get_industry_for_ticker(ticker)
-
+    print(stats)
     X_raw = {
         "neutral_dominance": stats.get("neutral_dominance", None),
         "net_sentiment": stats.get("net_sentiment", None),

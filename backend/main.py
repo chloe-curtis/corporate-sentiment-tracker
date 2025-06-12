@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import asyncio
 from backend.model import get_prediction_from_mda
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+# from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 
 app = FastAPI()
@@ -20,6 +20,7 @@ app = FastAPI()
 
 class MdaPayload(BaseModel):
     mda_payload: str
+    selected_ticker: str
 
 
 @app.get("/")
@@ -31,8 +32,9 @@ def read_root():
 @app.post("/get_prediction_from_mda")
 def get_prediction_from_sentiment_stats_proc(payload: MdaPayload):
     print("mda_payload", payload.mda_payload)
+    print("selected_ticker", payload.selected_ticker)
     prediction, neutral_dominance, net_sentiment, industry, sentiment_entropy = get_prediction_from_mda(
-        payload.mda_payload)#, app.state.tokenizer, app.state.model
+        payload.selected_ticker)#, app.state.tokenizer, app.state.model
     # )
     # Convert numpy array or numpy type to Python int
     if hasattr(prediction, "__iter__") and not isinstance(prediction, (str, bytes, dict)):
