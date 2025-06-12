@@ -26,16 +26,17 @@ WORKDIR /app
 
 # 3. Adım: ÖNCE sadece gereksinimler dosyasını kopyala
 # Bu sayede bu dosya değişmediği sürece, bir sonraki adım önbellekten kullanılır.
-COPY requirements_backend.txt .
+COPY requirements_backend.txt requirements_backend.txt
 
 # 4. Adım: Kütüphaneleri yükle (En yavaş adım)
 # Bu adım sadece requirements_backend.txt değiştiğinde tekrar çalışır.
-RUN pip install -r requirements_backend.txt
+RUN pip install --no-cache-dir -r requirements_backend.txt
 
 # 5. Adım: SONRA projedeki diğer tüm dosyaları kopyala
 # main.py'de değişiklik yaptığınızda sadece bu hızlı adım tekrar çalışır.
-COPY . .
+COPY backend backend
 
 # 6. Adım: Konteyner çalıştığında hangi komutun çalışacağını belirt
 # Ortam değişkeni ($PORT) kullanmak yerine doğrudan portu belirtmek daha güvenilirdir.
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+# 
