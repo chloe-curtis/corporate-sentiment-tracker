@@ -2,13 +2,17 @@
 # main.py
 
 from fastapi import FastAPI
-# from pydantic import BaseModel
+from pydantic import BaseModel
 # Hem fonksiyonu hem de test metnini model.py'dan import ediyoruz
 from model import get_sentiment_stats_from_text, test_mda
-from model import make_prediction
+from model import make_prediction, get_prediction_from_mda
 import pandas as pd
 
 app = FastAPI()
+
+class Mda_Payload(BaseModel):
+    mda_from_front: str
+
 
 @app.get("/")
 def read_root():
@@ -55,4 +59,18 @@ def get_prediction_from_sentiment_stats_proc(net_sentiment, industry, q_num, neu
     print(prediction)
     return {
         "prediction" : int(prediction)
+    }
+
+#try async?
+@app.post("/get_prediction_from_mda")
+def get_prediction_from_sentiment_stats_proc(mda_payload : Mda_Payload):
+    # mda_from_front = mda_payload['mda_from_front']
+    print("mda_payload", mda_payload)
+    print("mda_from_front", mda_payload.mda_from_front)
+    mda_from_front = mda_payload.mda_from_front
+    print("backend endpoint received mda text:", mda_from_front)
+    prediction = get_prediction_from_mda(mda_from_front)
+    print("backend endpoint sending prediction:", prediction)
+    return {
+        "prediction" : prediction
     }
