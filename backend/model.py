@@ -1,16 +1,15 @@
 import re
-# import torch
+import torch
 import numpy as np
 #commenting out while installing
-# from torch.nn.functional import softmax
-# from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from torch.nn.functional import softmax
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import joblib
 import io
-#if bucket later
-# from google.cloud import storage
+
 import pickle
 import pandas as pd
-from google.cloud import bigquery, storage
+from google.cloud import bigquery
 import xgboost
 
 # #load finbert model
@@ -28,194 +27,158 @@ ticker = "BBY"
 local_model_path = "backend/model/pipeline.pkl"
 
 
-# def get_sentiment_stats_from_text(text_mda, tokenizer, model):
-#     """
-#     Break the input text into paragraphs, run each through FinBERT, and compute:
-#       • count_positive_chunks, count_negative_chunks, count_neutral_chunks
-#       • max_positive_score, max_negative_score, max_neutral_score
-#       • sum_positive, sum_negative, sum_neutral
-#       • avg_positive, avg_negative, avg_neutral
+def get_sentiment_stats_from_text(text_mda, tokenizer, model):
+    """
+    Break the input text into paragraphs, run each through FinBERT, and compute:
+      • count_positive_chunks, count_negative_chunks, count_neutral_chunks
+      • max_positive_score, max_negative_score, max_neutral_score
+      • sum_positive, sum_negative, sum_neutral
+      • avg_positive, avg_negative, avg_neutral
 
-#     Returns a dict with all 12 metrics. Assumes logits order is [positive, negative, neutral].
+    Returns a dict with all 12 metrics. Assumes logits order is [positive, negative, neutral].
 
-#     """
+    """
 
-#     null_result_dict = {
-#             "count_positive_chunks": 0,
-#             "count_negative_chunks": 0,
-#             "count_neutral_chunks": 0,
-#             "max_positive_score":    -1,
-#             "max_negative_score":    -1,
-#             "max_neutral_score":     -1,
-#             "sum_positive":          -1,
-#             "sum_negative":          -1,
-#             "sum_neutral":           -1,
-#             "avg_positive":          -1,
-#             "avg_negative":          -1,
-#             "avg_neutral":           -1,
-#         }
+    null_result_dict = {
+            "count_positive_chunks": 0,
+            "count_negative_chunks": 0,
+            "count_neutral_chunks": 0,
+            "max_positive_score":    -1,
+            "max_negative_score":    -1,
+            "max_neutral_score":     -1,
+            "sum_positive":          -1,
+            "sum_negative":          -1,
+            "sum_neutral":           -1,
+            "avg_positive":          -1,
+            "avg_negative":          -1,
+            "avg_neutral":           -1,
+        }
 
-#     # 1) Skip if empty or too short
-#     if not isinstance(text_mda, str) or text_mda.strip() == "" or len(text_mda.strip()) < 20:
-#         # No valid chunks → everything zero or None
-#         print("text too short")
-#         return null_result_dict
+    # 1) Skip if empty or too short
+    if not isinstance(text_mda, str) or text_mda.strip() == "" or len(text_mda.strip()) < 20:
+        # No valid chunks → everything zero or None
+        print("text too short")
+        return null_result_dict
 
-#     # 2) Split into “paragraphs” by blank lines, drop any < 50 chars
-#     paragraphs = [
-#         para.strip()
-#         for para in re.split(r"\n+", text_mda)
-#         if len(para.strip()) > 50
-#     ]
+    # 2) Split into “paragraphs” by blank lines, drop any < 50 chars
+    paragraphs = [
+        para.strip()
+        for para in re.split(r"\n+", text_mda)
+        if len(para.strip()) > 50
+    ]
 
-#     # 3) For each paragraph, run model and collect (pos, neg, neu)
-#     chunk_probs = []
-#     for para in paragraphs:
-#         encoded = tokenizer(
-#             para,
-#             return_tensors="pt",
-#             truncation=True,
-#             max_length=512
-#         )
-#         with torch.no_grad():
-#             out   = model(**encoded)
-#             probs = softmax(out.logits, dim=1).squeeze().tolist()
-#             # probs = [positive_score, negative_score, neutral_score]
-#             chunk_probs.append({
-#                 "positive": probs[0],
-#                 "negative": probs[1],
-#                 "neutral":  probs[2],
-#             })
+    # 3) For each paragraph, run model and collect (pos, neg, neu)
+    chunk_probs = []
+    for para in paragraphs:
+        encoded = tokenizer(
+            para,
+            return_tensors="pt",
+            truncation=True,
+            max_length=512
+        )
+        with torch.no_grad():
+            out   = model(**encoded)
+            probs = softmax(out.logits, dim=1).squeeze().tolist()
+            # probs = [positive_score, negative_score, neutral_score]
+            chunk_probs.append({
+                "positive": probs[0],
+                "negative": probs[1],
+                "neutral":  probs[2],
+            })
 
-#     # 4) If no valid paragraphs, return zeros/None
-#     if not chunk_probs:
-#         print("no valid paragraphs")
-#         return null_result_dict
+    # 4) If no valid paragraphs, return zeros/None
+    if not chunk_probs:
+        print("no valid paragraphs")
+        return null_result_dict
 
-#     # 5) Initialize counters, sums, and max trackers
-#     count_pos = 0
-#     count_neg = 0
-#     count_neu = 0
-#     max_pos = 0.0
-#     max_neg = 0.0
-#     max_neu = 0.0
-#     sum_pos = 0.0
-#     sum_neg = 0.0
-#     sum_neu = 0.0
+    # 5) Initialize counters, sums, and max trackers
+    count_pos = 0
+    count_neg = 0
+    count_neu = 0
+    max_pos = 0.0
+    max_neg = 0.0
+    max_neu = 0.0
+    sum_pos = 0.0
+    sum_neg = 0.0
+    sum_neu = 0.0
 
-#     # 6) Loop over every chunk’s probabilities
-#     for probs in chunk_probs:
-#         p = probs["positive"]
-#         n = probs["negative"]
-#         u = probs["neutral"]
+    # 6) Loop over every chunk’s probabilities
+    for probs in chunk_probs:
+        p = probs["positive"]
+        n = probs["negative"]
+        u = probs["neutral"]
 
-#         # a) increment sums
-#         sum_pos += p
-#         sum_neg += n
-#         sum_neu += u
+        # a) increment sums
+        sum_pos += p
+        sum_neg += n
+        sum_neu += u
 
-#         # b) track maxima
-#         if p > max_pos:
-#             max_pos = p
-#         if n > max_neg:
-#             max_neg = n
-#         if u > max_neu:
-#             max_neu = u
+        # b) track maxima
+        if p > max_pos:
+            max_pos = p
+        if n > max_neg:
+            max_neg = n
+        if u > max_neu:
+            max_neu = u
 
-#         # c) count which label is highest for this chunk
-#         top_label_idx = max(
-#             enumerate((p, n, u)),
-#             key=lambda x: x[1]
-#         )[0]
-#         if top_label_idx == 0:
-#             count_pos += 1
-#         elif top_label_idx == 1:
-#             count_neg += 1
-#         else:
-#             count_neu += 1
+        # c) count which label is highest for this chunk
+        top_label_idx = max(
+            enumerate((p, n, u)),
+            key=lambda x: x[1]
+        )[0]
+        if top_label_idx == 0:
+            count_pos += 1
+        elif top_label_idx == 1:
+            count_neg += 1
+        else:
+            count_neu += 1
 
-#     # 7) Compute averages
-#     num_chunks = len(chunk_probs)
-#     avg_pos = sum_pos / num_chunks
-#     avg_neg = sum_neg / num_chunks
-#     avg_neu = sum_neu / num_chunks
+    # 7) Compute averages
+    num_chunks = len(chunk_probs)
+    avg_pos = sum_pos / num_chunks
+    avg_neg = sum_neg / num_chunks
+    avg_neu = sum_neu / num_chunks
 
-#     # 8) net sentiment
-#     net_sentiment = ((sum_pos - sum_neg) / num_chunks)
+    # 8) net sentiment
+    net_sentiment = ((sum_pos - sum_neg) / num_chunks)
 
-#     # 9) neutral dominance
-#     neutral_ratio = sum_neu / num_chunks
-#     neutral_dominance = neutral_ratio > 0.6
-#     print(f'neutral_dominance from get_senti function: {neutral_dominance}')
-#     # 10) entropy
-#     #entropy
-#     entropy = 0.0
-#     # Create a list of the proportions
-#     proportions = [sum_pos / num_chunks, sum_neg / num_chunks, sum_neu / num_chunks]
-#     # Loop through and apply the entropy formula to non-zero proportions
-#     for p in proportions:
-#         if p > 0:
-#             entropy -= p * np.log2(p)
+    # 9) neutral dominance
+    neutral_ratio = sum_neu / num_chunks
+    neutral_dominance = neutral_ratio > 0.6
+    print(f'neutral_dominance from get_senti function: {neutral_dominance}')
+    # 10) entropy
+    #entropy
+    entropy = 0.0
+    # Create a list of the proportions
+    proportions = [sum_pos / num_chunks, sum_neg / num_chunks, sum_neu / num_chunks]
+    # Loop through and apply the entropy formula to non-zero proportions
+    for p in proportions:
+        if p > 0:
+            entropy -= p * np.log2(p)
 
-#     return {
-#         # total chunks
-#         "count_positive_chunks": count_pos,
-#         "count_negative_chunks": count_neg,
-#         "count_neutral_chunks":  count_neu,
-#         "max_positive_score":    max_pos,
-#         "max_negative_score":    max_neg,
-#         "max_neutral_score":     max_neu,
-#         "sum_positive":          sum_pos,
-#         "sum_negative":          sum_neg,
-#         "sum_neutral":           sum_neu,
-#         "avg_positive":          avg_pos,
-#         "avg_negative":          avg_neg,
-#         "avg_neutral":           avg_neu,
-#         "net_sentiment":         net_sentiment,
-#         "neutral_dominance":     neutral_dominance,
-#         "sentiment_entropy":     entropy
-#     }
+    return {
+        # total chunks
+        "count_positive_chunks": count_pos,
+        "count_negative_chunks": count_neg,
+        "count_neutral_chunks":  count_neu,
+        "max_positive_score":    max_pos,
+        "max_negative_score":    max_neg,
+        "max_neutral_score":     max_neu,
+        "sum_positive":          sum_pos,
+        "sum_negative":          sum_neg,
+        "sum_neutral":           sum_neu,
+        "avg_positive":          avg_pos,
+        "avg_negative":          avg_neg,
+        "avg_neutral":           avg_neu,
+        "net_sentiment":         net_sentiment,
+        "neutral_dominance":     neutral_dominance,
+        "sentiment_entropy":     entropy
+    }
 
 def load_model_from_local(model_path):
     model_pipe = pickle.load(open(model_path,"rb"))
     return model_pipe
 
-#untested?
-# def load_pickle_from_bucket(bucket_filepath, bucket_name="sentiment_chloe-curtis"):
-#     try:
-#         # Initialize GCS client
-#         storage_client = storage.Client()
-#         bucket = storage_client.bucket(bucket_name)
-#         bucket_filepath = "model/model_pipeline.pkl"
-#         # Access blob
-#         blob = bucket.blob(bucket_filepath)
-
-#         # Download bytes and load into memory
-#         pickle_bytes = blob.download_as_bytes()
-#         model = joblib.load(io.BytesIO(pickle_bytes))
-
-#         print(f"✅ Successfully loaded pickle file '{bucket_filepath}' from bucket '{bucket_name}'.")
-#         return model
-
-#     except Exception as e:
-#         print(f"❌ Failed to load pickle from bucket: {e}")
-#         return None
-
-# def get_X_raw(test_mda):
-#     stats = get_sentiment_stats_from_text(test_mda)
-#     industry = get_industry_for_ticker(ticker)
-#     X_raw = {
-#         "neutral_dominance": stats.get("neutral_dominance", None),
-#         "net_sentiment": stats.get("net_sentiment", None),
-#         "industry": industry,
-#         "q_num": q_num
-#     }
-#     X_new = pd.DataFrame([X_raw])  # wrap dict in a list to make 1-row DataFrame
-#     X_new = X_new.astype({
-#         'q_num': 'object',
-#         'neutral_dominance': 'object'
-#     })
-#     return X_new
 
 def get_industry_for_ticker(ticker: str):
     client = bigquery.Client()
@@ -242,17 +205,17 @@ def make_prediction(X_new):
     print("prediction", prediction)
     return prediction
 
-def get_prediction_from_mda(mda):
+def get_prediction_from_mda(mda, tokenizer, model, ticker, q_num):
     # tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
     # model     = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
     # print("tokenizer and model loaded")
-    # stats = get_sentiment_stats_from_text(mda, tokenizer, model)
-    if mda == 'BBY':
-        stats = {'count_positive_chunks': 0, 'count_negative_chunks': 0, 'count_neutral_chunks': 3, 'max_positive_score': 0.25511595606803894, 'max_negative_score': 0.14733800292015076, 'max_neutral_score': 0.947933554649353, 'sum_positive': 0.32444705069065094, 'sum_negative': 0.17370122112333775, 'sum_neutral': 2.501851737499237, 'avg_positive': 0.10814901689688365, 'avg_negative': 0.05790040704111258, 'avg_neutral': 0.8339505791664124, 'net_sentiment': 0.050248609855771065, 'neutral_dominance': True, 'sentiment_entropy': np.float64(0.803494105414829)}
-    if mda == 'TSLA':
-        stats = {'count_positive_chunks': 0, 'count_negative_chunks': 0, 'count_neutral_chunks': 2, 'max_positive_score': 0.4343007206916809, 'max_negative_score': 0.07288125157356262, 'max_neutral_score': 0.8163108825683594, 'sum_positive': 0.6104723066091537, 'sum_negative': 0.0803988422267139, 'sum_neutral': 1.309128999710083, 'avg_positive': 0.3052361533045769, 'avg_negative': 0.04019942111335695, 'avg_neutral': 0.6545644998550415, 'net_sentiment': 0.2650367321912199, 'neutral_dominance': True, 'sentiment_entropy': np.float64(1.1091528697961652)}
-    if mda == 'LYV':
-        stats = {'count_positive_chunks': 1, 'count_negative_chunks': 1, 'count_neutral_chunks': 0, 'max_positive_score': 0.9533109068870544, 'max_negative_score': 0.9519463181495667, 'max_neutral_score': 0.02449231967329979, 'sum_positive': 0.9808148592710495, 'sum_negative': 0.9741430841386318, 'sum_neutral': 0.04504207335412502, 'avg_positive': 0.49040742963552475, 'avg_negative': 0.4870715420693159, 'avg_neutral': 0.02252103667706251, 'net_sentiment': 0.0033358875662088394, 'neutral_dominance': False, 'sentiment_entropy': np.float64(1.1328413336876446)}
+    stats = get_sentiment_stats_from_text(mda, tokenizer, model)
+    # if mda == 'BBY':
+    #     stats = {'count_positive_chunks': 0, 'count_negative_chunks': 0, 'count_neutral_chunks': 3, 'max_positive_score': 0.25511595606803894, 'max_negative_score': 0.14733800292015076, 'max_neutral_score': 0.947933554649353, 'sum_positive': 0.32444705069065094, 'sum_negative': 0.17370122112333775, 'sum_neutral': 2.501851737499237, 'avg_positive': 0.10814901689688365, 'avg_negative': 0.05790040704111258, 'avg_neutral': 0.8339505791664124, 'net_sentiment': 0.050248609855771065, 'neutral_dominance': True, 'sentiment_entropy': np.float64(0.803494105414829)}
+    # if mda == 'TSLA':
+    #     stats = {'count_positive_chunks': 0, 'count_negative_chunks': 0, 'count_neutral_chunks': 2, 'max_positive_score': 0.4343007206916809, 'max_negative_score': 0.07288125157356262, 'max_neutral_score': 0.8163108825683594, 'sum_positive': 0.6104723066091537, 'sum_negative': 0.0803988422267139, 'sum_neutral': 1.309128999710083, 'avg_positive': 0.3052361533045769, 'avg_negative': 0.04019942111335695, 'avg_neutral': 0.6545644998550415, 'net_sentiment': 0.2650367321912199, 'neutral_dominance': True, 'sentiment_entropy': np.float64(1.1091528697961652)}
+    # if mda == 'LYV':
+    #     stats = {'count_positive_chunks': 1, 'count_negative_chunks': 1, 'count_neutral_chunks': 0, 'max_positive_score': 0.9533109068870544, 'max_negative_score': 0.9519463181495667, 'max_neutral_score': 0.02449231967329979, 'sum_positive': 0.9808148592710495, 'sum_negative': 0.9741430841386318, 'sum_neutral': 0.04504207335412502, 'avg_positive': 0.49040742963552475, 'avg_negative': 0.4870715420693159, 'avg_neutral': 0.02252103667706251, 'net_sentiment': 0.0033358875662088394, 'neutral_dominance': False, 'sentiment_entropy': np.float64(1.1328413336876446)}
     industry = get_industry_for_ticker(ticker)
     print(stats)
     X_raw = {
@@ -462,22 +425,22 @@ The Company also issues unsecured short-term promissory notes pursuant to a comm
 
 """
 
-if __name__ == "__main__":
-    X_new = pd.DataFrame([{
-            'net_sentiment': -0.1,
-            'industry': 'Auto Manufacturers',
-            'q_num': "4",
-            'neutral_dominance': False
-        }])
-    X_new = X_new.astype({
-        'q_num': 'object',
-        'neutral_dominance': 'object'
-    })
+# if __name__ == "__main__":
+#     X_new = pd.DataFrame([{
+#             'net_sentiment': -0.1,
+#             'industry': 'Auto Manufacturers',
+#             'q_num': "4",
+#             'neutral_dominance': False
+#         }])
+#     X_new = X_new.astype({
+#         'q_num': 'object',
+#         'neutral_dominance': 'object'
+#     })
 
-    print("test prediction with manual x_new:", make_prediction(X_new))
+#     print("test prediction with manual x_new:", make_prediction(X_new))
 
-    print("\n=====\n")
-    X_new2 = get_X_raw(test_mda)
-    print("test prediction with function made x_new, from test_mda", make_prediction(X_new2))
+#     print("\n=====\n")
+#     X_new2 = get_X_raw(test_mda)
+#     print("test prediction with function made x_new, from test_mda", make_prediction(X_new2))
 
     #print(get_sentiment_stats_from_text(test_mda))
